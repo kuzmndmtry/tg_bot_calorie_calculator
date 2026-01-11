@@ -115,4 +115,38 @@ async def amount_of_food_per_day(user_id: int):
         result = await session.execute(amount_of_food)
         amount = result.scalar()
         return amount
+    
+
+class Workout_log(Base):
+    __tablename__ = 'workout_log'
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(nullable=False)
+    name: Mapped[str] = mapped_column(String(100),nullable=False)
+    amount: Mapped[int] = mapped_column(nullable=False)
+    date: Mapped[date] = mapped_column(Date, nullable=False)
+
+# сохраняем трен 
+async def save_workout(user_id: int,  name: str, amount: float):
+    async with async_session() as session:
+        async with session.begin():
+            workout_log = Workout_log (
+                user_id = user_id, 
+                amount = amount,
+                name = name,
+                date = date.today()
+            )
+            session.add(workout_log)
+        await session.commit()
+
+# считаем трен
+async def amount_of_workout_per_day(user_id: int):
+    async with async_session() as session:
+        amount_of_workout = select(func.sum(Workout_log.amount)).where(
+            Workout_log.user_id == user_id,
+            Workout_log.date == date.today()
+            )
+        result = await session.execute(amount_of_workout)
+        amount = result.scalar()
+        return amount
+
 

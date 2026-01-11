@@ -10,4 +10,6 @@ class Profile(StatesGroup):
     water_goal = State()
 
 class Food(StatesGroup):
+    name = State()
+    ccals = State()
     grams =State()
