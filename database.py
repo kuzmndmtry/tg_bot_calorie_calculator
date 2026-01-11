@@ -74,14 +74,16 @@ async def save_water(user_id: int, amount: int):
         await session.commit()
 
 # считаем воду
-async def amount_of_water_per_day(user_id: int):
+async def amount_of_water_per_day(user_id: int, target_date: date = None):
+    if target_date is None:
+        target_date = date.today()
     async with async_session() as session:
         amount_of_water = select(func.sum(Water_Log.amount)).where(
             Water_Log.user_id == user_id,
-            Water_Log.date == date.today()
+            Water_Log.date == target_date
             )
         result = await session.execute(amount_of_water)
-        amount = result.scalar()
+        amount = result.scalar() or 0
         return amount
 
 class  Food_Log(Base):
@@ -106,18 +108,20 @@ async def save_food(user_id: int,  name: str, ccals: float):
         await session.commit()
 
 # считаем еду
-async def amount_of_food_per_day(user_id: int):
+async def amount_of_food_per_day(user_id: int, target_date: date = None):
+    if target_date is None:
+        target_date = date.today()
     async with async_session() as session:
         amount_of_food = select(func.sum(Food_Log.ccals)).where(
             Food_Log.user_id == user_id,
-            Food_Log.date == date.today()
+            Food_Log.date == target_date
             )
         result = await session.execute(amount_of_food)
-        amount = result.scalar()
+        amount = result.scalar() or 0
         return amount
     
 
-class Workout_log(Base):
+class Workout_Log(Base):
     __tablename__ = 'workout_log'
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(nullable=False)
@@ -141,9 +145,9 @@ async def save_workout(user_id: int,  name: str, amount: float):
 # считаем трен
 async def amount_of_workout_per_day(user_id: int):
     async with async_session() as session:
-        amount_of_workout = select(func.sum(Workout_log.amount)).where(
-            Workout_log.user_id == user_id,
-            Workout_log.date == date.today()
+        amount_of_workout = select(func.sum(Workout_Log.amount)).where(
+            Workout_Log.user_id == user_id,
+            Workout_Log.date == date.today()
             )
         result = await session.execute(amount_of_workout)
         amount = result.scalar()

@@ -1,13 +1,13 @@
 from aiogram import Router
-from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message, FSInputFile
 from aiogram.filters import Command
-from aiogram.fsm.context import FSMContext
+from aiogram.fsm.context import FSMContext 
 import httpx
 from states import Profile, Food
-import aiohttp
 from database import save_food, save_profile, save_water, amount_of_water_per_day, get_profile, save_workout, amount_of_workout_per_day, amount_of_food_per_day
 from config import WEATHER_API_KEY
 import requests
+from graph import water_progress_graph, ccal_progress_graph
 
 
 router = Router()
@@ -90,7 +90,7 @@ async def process_calories(message: Message, state: FSMContext):
     temp = await get_weather(data.get('city'))
 
     # +500 за жаркую погоду (> 25°C).
-    if temp > -25:
+    if temp > 25:
         temp_coef = 500
     else: temp_coef = 0
     
@@ -169,6 +169,10 @@ async def cmd_log_food(message: Message, state: FSMContext):
     food_name = message.text.split()[1]
 
     food_stats = get_food_info(food_name)
+    if not food_stats:
+        await message.reply("еда не найдена")
+        return
+
     caloric_value = food_stats["calories"]
 
     await state.update_data(name=food_name)
@@ -239,6 +243,20 @@ async def cmd_check_progress(message: Message):
         f"- Сожжено: {amount_of_workout} ккал.\n"
         f"- Баланс: {amount_of_food - amount_of_workout} ккал.\n"
     )
+
+# Обработчик команды /water_progress_graph
+@router.message(Command("water_progress_graph"))
+async def cmd_water_progress_graph(message: Message):
+    graph_path = await water_progress_graph(message.from_user.id)
+    graph = FSInputFile(graph_path)
+    await message.answer_photo(photo=graph)
+
+# Обработчик команды /ccal_progress_graph
+@router.message(Command("ccal_progress_graph"))
+async def cmd_ccal_progress_graph(message: Message):
+    graph_path = await ccal_progress_graph(message.from_user.id)
+    graph = FSInputFile(graph_path)
+    await message.answer_photo(photo=graph)   
 
 
 # Функция для подключения обработчиков
