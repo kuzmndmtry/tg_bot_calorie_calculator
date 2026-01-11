@@ -6,3 +6,4 @@ aiofiles==25.1.0
 sqlalchemy
 greenlet
 httpx
+requests

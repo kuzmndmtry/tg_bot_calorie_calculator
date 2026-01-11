@@ -1,7 +1,7 @@
 from enum import Enum as PyEnum
 from datetime import date
 from typing import List, Optional
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Date, Integer, String, func, select
 from datetime import date
 from sqlalchemy.orm import relationship, Mapped, mapped_column, DeclarativeBase, sessionmaker
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -59,25 +59,60 @@ class Water_Log(Base):
    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
    user_id: Mapped[int] = mapped_column(nullable=False)
    amount: Mapped[int] = mapped_column(nullable=False)
-   date: Mapped[date] = mapped_column(nullable=False)
+   date: Mapped[date] = mapped_column(Date, nullable=False)
 
-# Сохраняем воду
-async def save_profile(user_id: int, amount: int):
+# сохраняем воду
+async def save_water(user_id: int, amount: int):
     async with async_session() as session:
         async with session.begin():
-            profile = await session.get(Profile, user_id)
-            if not profile:
-                profile = Profile(user_id=user_id)
-            profile.weight = float(data["weight"])
-            profile.height = float(data["height"])
-            profile.age = int(data["age"])
-            profile.activity = int(data["activity"])
-            profile.city = data["city"]
-            profile.calories_goal = data.get("calories_goal")
-            profile.water_goal = data.get("water_goal")
-            session.add(profile)
+            water_log = Water_Log (
+                user_id = user_id, 
+                amount = amount,
+                date = date.today()
+            )
+            session.add(water_log)
         await session.commit()
 
+# считаем воду
+async def amount_of_water_per_day(user_id: int):
+    async with async_session() as session:
+        amount_of_water = select(func.sum(Water_Log.amount)).where(
+            Water_Log.user_id == user_id,
+            Water_Log.date == date.today()
+            )
+        result = await session.execute(amount_of_water)
+        amount = result.scalar()
+        return amount
 
+class  Food_Log(Base):
+   __tablename__ = 'food_logs'
+   id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+   user_id: Mapped[int] = mapped_column(nullable=False)
+   name: Mapped[str] = mapped_column(String(100),nullable=False)
+   ccals: Mapped[float] = mapped_column(nullable=False)
+   date: Mapped[date] = mapped_column(Date, nullable=False)
 
+# сохраняем еду 
+async def save_food(user_id: int,  name: str, ccals: float):
+    async with async_session() as session:
+        async with session.begin():
+            food_log = Food_Log (
+                user_id = user_id, 
+                ccals = ccals,
+                name = name,
+                date = date.today()
+            )
+            session.add(food_log)
+        await session.commit()
+
+# считаем еду
+async def amount_of_food_per_day(user_id: int):
+    async with async_session() as session:
+        amount_of_food = select(func.sum(Food_Log.ccals)).where(
+            Food_Log.user_id == user_id,
+            Food_Log.date == date.today()
+            )
+        result = await session.execute(amount_of_food)
+        amount = result.scalar()
+        return amount
 

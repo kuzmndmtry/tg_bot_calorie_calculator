@@ -8,3 +8,6 @@ class Profile(StatesGroup):
     city = State() # Город (для получения температуры)
     calories_goal = State() #Цель калорий (по умолчанию рассчитывается, но можно задавать вручную).
     water_goal = State()
+
+class Food(StatesGroup):
+    grams =State()

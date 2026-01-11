@@ -5,8 +5,9 @@ from aiogram.fsm.context import FSMContext
 import httpx
 from states import Profile
 import aiohttp
-from database import save_profile
+from database import save_profile, save_water, amount_of_water_per_day, get_profile
 from config import WEATHER_API_KEY
+import requests
 
 
 router = Router()
@@ -24,6 +25,7 @@ async def cmd_help(message: Message):
         "/start - Начало работы\n"
         "/help - Доступные команды\n"
         "/set_profile  - Настройка профиля пользователя \n"
+        "/log_water <количество>\n"
     )
 # Настройка профиля пользователя   
 # Обработчик команды /set_profile 
@@ -123,8 +125,61 @@ async def get_weather(city: str):
     
 # Обработчик команды /log_water <количество>
 @router.message(Command("log_water"))
-async def cmd_set_profile(message: Message, state: FSMContext):
-    await message.reply("Введите ваш вес (в кг):")
+async def cmd_log_water(message: Message):
+    amount = int(message.text.split()[1])
+
+    client = await get_profile(message.from_user.id)
+
+    await save_water(message.from_user.id,amount)
+
+    amount_today = await amount_of_water_per_day(client.user_id)
+    delta = client.water_goal - amount_today
+    await message.reply(
+        f"Вода: \n"
+        f"- Выпито: {amount_today} мл из {client.water_goal } мл.\n"
+        f"- Осталось: {delta} мл."
+    )
+
+
+
+# Пример поиска калорийности продукта. Работает так себе и ищет не то что нужно, но для нашего задания пойдет
+def get_food_info(product_name):
+    url = f"https://world.openfoodfacts.org/cgi/search.pl?action=process&search_terms={product_name}&json=true"
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        products = data.get('products', [])
+        if products:  # Проверяем, есть ли найденные продукты
+            first_product = products[0]
+            return {
+                'name': first_product.get('product_name', 'Неизвестно'),
+                'calories': first_product.get('nutriments', {}).get('energy-kcal_100g', 0)
+            }
+        return None
+    print(f"Ошибка: {response.status_code}")
+    return None
+
+
+# Обработчик команды /log_food <название продукта>
+@router.message(Command("log_water"))
+async def cmd_log_water(message: Message):
+    amount = int(message.text.split()[1])
+
+    client = await get_profile(message.from_user.id)
+
+    await save_water(message.from_user.id,amount)
+
+    amount_today = await amount_of_water_per_day(client.user_id)
+    delta = client.water_goal - amount_today
+    await message.reply(
+        f"Вода: \n"
+        f"- Выпито: {amount_today} мл из {client.water_goal } мл.\n"
+        f"- Осталось: {delta} мл."
+    )
+
+
+
+
 
 # Функция для подключения обработчиков
 def setup_handlers(dp):
