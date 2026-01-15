@@ -29,6 +29,8 @@ async def cmd_help(message: Message):
         "/log_food <название продукта> - Бот использует API OpenFoodFacts) для получения информации о продукте. Сохраняет калорийность.\n"
         "/log_workout <тип тренировки> <время (мин)> - Фиксирует сожжённые калории.\n"
         "/check_progress - Показывает, сколько воды и калорий потреблено, сожжено и сколько осталось до выполнения цели.\n"
+        "/water_progress_graph - График прогресса по воде\n"
+        "/ccal_progress_graph - Графики прогресса по калориям\n"
     )
 # Настройка профиля пользователя   
 # Обработчик команды /set_profile 
@@ -199,14 +201,14 @@ async def process_food_grams(message: Message, state: FSMContext):
 @router.message(Command("log_workout"))
 async def cmd_log_workout(message: Message):
     type_workout = message.text.split()[1]
-    amount = int(message.text.split()[2])
+    amount = float(message.text.split()[2])
     act_ccals = amount * 10
     client = await get_profile(message.from_user.id)
 
 
-    await save_workout(user_id=message.from_user.id, name=type_workout, amount= amount)
+    await save_workout(user_id=message.from_user.id, name=type_workout, amount= act_ccals)
     
-    water_plus = 200*(int(amount)//30)
+    water_plus = 200*(float(amount)//30)
 
     # при добавлении воды учитываю время одной тренировки а не суммарное время тренировок за день. 
     if amount > 30:

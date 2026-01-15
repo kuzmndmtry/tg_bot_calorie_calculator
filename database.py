@@ -1,6 +1,4 @@
-from enum import Enum as PyEnum
 from datetime import date
-from typing import List, Optional
 from sqlalchemy import Column, Date, Integer, String, func, select
 from datetime import date
 from sqlalchemy.orm import relationship, Mapped, mapped_column, DeclarativeBase, sessionmaker
@@ -126,14 +124,14 @@ class Workout_Log(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(nullable=False)
     name: Mapped[str] = mapped_column(String(100),nullable=False)
-    amount: Mapped[int] = mapped_column(nullable=False)
+    amount: Mapped[float] = mapped_column(nullable=False)
     date: Mapped[date] = mapped_column(Date, nullable=False)
 
 # сохраняем трен 
 async def save_workout(user_id: int,  name: str, amount: float):
     async with async_session() as session:
         async with session.begin():
-            workout_log = Workout_log (
+            workout_log = Workout_Log (
                 user_id = user_id, 
                 amount = amount,
                 name = name,
