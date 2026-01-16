@@ -50,8 +50,6 @@ async def get_profile(user_id: int):
     async with async_session() as session:
         profile = await session.get(Profile, user_id)
         return profile
-
-
 class Water_Log(Base):
    __tablename__ = 'water_logs'
    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)

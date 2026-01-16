@@ -249,6 +249,8 @@ async def cmd_check_progress(message: Message):
 # Обработчик команды /water_progress_graph
 @router.message(Command("water_progress_graph"))
 async def cmd_water_progress_graph(message: Message):
+    if not await get_profile(message.from_user.id):
+        await message.answer("Профиль не создан. Создайте профиль командой /set_profile")
     graph_path = await water_progress_graph(message.from_user.id)
     graph = FSInputFile(graph_path)
     await message.answer_photo(photo=graph)
