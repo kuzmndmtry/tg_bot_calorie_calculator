@@ -212,7 +212,11 @@ async def cmd_log_food(message: Message, state: FSMContext):
 @router.message(Food.grams)
 async def process_food_grams(message: Message, state: FSMContext):
     data = await state.get_data()
-    grams = int(message.text)
+    try:
+        grams = int(message.text)
+    except ValueError:
+        await message.answer("Кол-во должно быть целым числом")
+        return
 
     total_caloric_value = data["ccals"]*grams/100
 
