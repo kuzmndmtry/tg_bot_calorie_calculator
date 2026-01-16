@@ -41,25 +41,46 @@ async def cmd_set_profile(message: Message, state: FSMContext):
 
 @router.message(Profile.weight)
 async def process_weight(message: Message, state: FSMContext):
-    await state.update_data(weight=message.text)
+    try:
+        weight=float(message.text)
+    except ValueError:
+        await message.answer("Значение должно быть числом")
+        return 
+
+    await state.update_data(weight=weight)
     await message.reply("Введите ваш рост (в см):") # следующий вопрос
     await state.set_state(Profile.height)
 
 @router.message(Profile.height)
 async def process_height(message: Message, state: FSMContext):
-    await state.update_data(height=message.text)
+    try:
+        height=float(message.text)
+    except ValueError:
+        await message.answer("Значение должно быть числом")
+        return 
+    await state.update_data(height=height)
     await message.reply("Введите ваш возраст:")
     await state.set_state(Profile.age) 
 
 @router.message(Profile.age)
 async def process_age(message: Message, state: FSMContext):
-    await state.update_data(age=message.text)
+    try:
+        age=int(message.text)
+    except ValueError:
+        await message.answer("Значение должно быть целым числом")
+        return 
+    await state.update_data(age=age)
     await message.reply("Сколько минут активности у вас в день?")
     await state.set_state(Profile.activity) 
 
 @router.message(Profile.activity)
 async def process_activity(message: Message, state: FSMContext):
-    await state.update_data(activity=message.text)
+    try:
+        activity= float(message.text)
+    except ValueError:
+        await message.answer("Значение должно быть  числом")
+        return 
+    await state.update_data(activity=activity)
     await message.reply("В каком городе вы находитесь?")
     await state.set_state(Profile.city) 
 
@@ -78,6 +99,7 @@ async def process_calories(message: Message, state: FSMContext):
     except ValueError:
         calories_goal = 0
         await message.answer("Цель ко калориям должна быть целым числом. Цель рассчитана автоматически")
+        return
 
     if int(data['activity']) == 0:
         coef = 0
