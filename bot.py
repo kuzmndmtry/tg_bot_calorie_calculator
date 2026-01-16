@@ -8,6 +8,14 @@ from middlewares import LoggingMiddleware
 from database import init_db
 from aiohttp import web
 
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
+
 # Создаем экземпляры бота и диспетчера
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
