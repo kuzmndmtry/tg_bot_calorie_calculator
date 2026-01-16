@@ -72,7 +72,12 @@ async def process_city(message: Message, state: FSMContext):
 @router.message(Profile.calories_goal)
 async def process_calories(message: Message, state: FSMContext):
     data = await state.get_data()
-    calories_goal = int(message.text.strip())
+
+    try:
+        calories_goal = int(message.text.strip())
+    except ValueError:
+        calories_goal = 0
+        await message.answer("Цель ко калориям должна быть целым числом. Цель рассчитана автоматически")
 
     if int(data['activity']) == 0:
         coef = 0
@@ -84,20 +89,25 @@ async def process_calories(message: Message, state: FSMContext):
     else:
         coef = 300
 
+
     if  calories_goal == 0:
         calories_goal = int(10*float(data['weight']) + 6.25 * float(data['height']) - 5*int(data['age'])) - coef
 
     await state.update_data(calories_goal=calories_goal)
 
-    temp = await get_weather(data.get('city'))
+    temp_coef = 0
 
-    # +500 за жаркую погоду (> 25°C).
-    if temp > 25:
-        temp_coef = 500
-    else: temp_coef = 0
+    try:
+        temp = await get_weather(data.get('city'))
+        if temp > 25:
+            temp_coef = 500 # +500 за жаркую погоду (> 25°C).
+    except Exception as e:
+        await message.answer("Не удалось получить погоду в вашем городе. Цель по воде будет рассчитана без температурного коэффициента")
+
     
     act_coef = 500*(int(data.get('activity'))//30) # +500мл  за каждые 30 минут активности.
-    
+    print(temp_coef)
+    print(act_coef)
     water_goal = int(30*float(data['weight'])) + temp_coef + act_coef
     await state.update_data(water_goal=water_goal)
 
@@ -120,18 +130,26 @@ async def get_weather(city: str):
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(url)    
-            if response.status_code == 200:
-                temp = response.json()['main']['temp']    
-                return temp  
-            else:
-                return response.status_code
+            temp = response.json()['main']['temp']  
+            return temp
     except httpx.RequestError as e:
-            return str(e)
+            print(e)
+            return 0
     
 # Обработчик команды /log_water <количество>
 @router.message(Command("log_water"))
 async def cmd_log_water(message: Message):
-    amount = int(message.text.split()[1])
+    if not await get_profile(message.from_user.id):
+        await message.answer("Профиль не создан. Создайте профиль командой /set_profile")
+        return
+    try:
+        amount = int(message.text.split()[1])
+    except IndexError:
+        await message.answer("Неверная команда. Введите /log_water <количество>")
+        return
+    except ValueError:
+        await message.answer("Кол-во должно быть целым числом")
+        return
 
     client = await get_profile(message.from_user.id)
 
@@ -144,7 +162,6 @@ async def cmd_log_water(message: Message):
         f"- Выпито: {amount_today} мл из {client.water_goal } мл.\n"
         f"- Осталось: {delta} мл."
     )
-
 
 
 # Пример поиска калорийности продукта. Работает так себе и ищет не то что нужно, но для нашего задания пойдет
@@ -168,7 +185,16 @@ def get_food_info(product_name):
 # Обработчик команды /log_food <название продукта>
 @router.message(Command("log_food"))
 async def cmd_log_food(message: Message, state: FSMContext):
-    food_name = message.text.split()[1]
+    if not await get_profile(message.from_user.id):
+        await message.answer("Профиль не создан. Создайте профиль командой /set_profile")
+        return
+    try:
+        food_name = " ".join(message.text.split()[1:])
+        if not food_name:
+            raise IndexError
+    except IndexError:
+        await message.answer("Неверная команда. Введите /log_food <название продукта>")
+        return
 
     food_stats = get_food_info(food_name)
     if not food_stats:
@@ -200,8 +226,22 @@ async def process_food_grams(message: Message, state: FSMContext):
 # Обработчик команды /log_workout <тип тренировки> <время (мин)>
 @router.message(Command("log_workout"))
 async def cmd_log_workout(message: Message):
-    type_workout = message.text.split()[1]
-    amount = float(message.text.split()[2])
+    if not await get_profile(message.from_user.id):
+        await message.answer("Профиль не создан. Создайте профиль командой /set_profile")
+        return
+    try:
+        type_workout = " ".join(message.text.split()[1:-1])
+        if  not type_workout:
+            raise IndexError
+        amount = float(message.text.split()[-1])
+    except IndexError:
+        await message.answer("Неверная команда. /log_workout <тип тренировки> <время (мин)>")
+        return
+    except ValueError:
+        await message.answer("Длительность тренировки должна быть числом")
+        return
+    
+    
     act_ccals = amount * 10
     client = await get_profile(message.from_user.id)
 
@@ -231,6 +271,9 @@ async def cmd_log_workout(message: Message):
 # Обработчик команды /check_progress
 @router.message(Command("check_progress"))
 async def cmd_check_progress(message: Message):
+    if not await get_profile(message.from_user.id):
+        await message.answer("Профиль не создан. Создайте профиль командой /set_profile")
+        return
     amount_of_food = await amount_of_food_per_day(message.from_user.id) or 0 
     amount_of_water = await amount_of_water_per_day(message.from_user.id) or 0 
     amount_of_workout = await amount_of_workout_per_day(message.from_user.id) or 0
@@ -251,6 +294,7 @@ async def cmd_check_progress(message: Message):
 async def cmd_water_progress_graph(message: Message):
     if not await get_profile(message.from_user.id):
         await message.answer("Профиль не создан. Создайте профиль командой /set_profile")
+        return
     graph_path = await water_progress_graph(message.from_user.id)
     graph = FSInputFile(graph_path)
     await message.answer_photo(photo=graph)
@@ -258,6 +302,9 @@ async def cmd_water_progress_graph(message: Message):
 # Обработчик команды /ccal_progress_graph
 @router.message(Command("ccal_progress_graph"))
 async def cmd_ccal_progress_graph(message: Message):
+    if not await get_profile(message.from_user.id):
+        await message.answer("Профиль не создан. Создайте профиль командой /set_profile")
+        return
     graph_path = await ccal_progress_graph(message.from_user.id)
     graph = FSInputFile(graph_path)
     await message.answer_photo(photo=graph)   
